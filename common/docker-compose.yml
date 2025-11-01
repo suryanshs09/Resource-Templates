@@ -1,0 +1,58 @@
+services:
+
+# Remeber to change the name of services and their container_name to be specific to it's purpose
+# For Example:
+# backend_service => auth_service
+# postgres_db     => auth_db
+# redis_cache     => auth_cache
+
+  backend_service:
+    container_name: backend_service
+    build:
+      # Assuming we have ./backend-service/Dockerfile present at this location
+      context: ./backend-service  
+    environment:
+      POSTGRES_HOST: postgres_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      REDIS_HOST: redis_cache
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8000
+    ports:
+      - "${HOST_PORT}:8000"
+    depends_on:
+      - postgres_db
+      - redis_cache
+    networks:
+      - internal_network
+
+  postgres_db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      # In the latest versions (18+) of postgres we need to map it to the "/var/lib/postgresql" as "/var/lib/postgresql/data" generates errors
+      - ./db_data/postgres_db_data:/var/lib/postgresql
+    networks:
+      - internal_network
+  
+  redis_cache:
+    image: redis:latest
+    container_name: redis_cache
+    ports:
+      - "${CACHE_PORT}:6379"
+    networks:
+      - internal_network
+
+networks:
+  internal_network:
+    driver: bridge
+
+# volumes:
+#   postgres_db_data:
